@@ -1,0 +1,127 @@
+# Advent of Code - Day 3
+
+## Part 1
+
+### Potential Improvements:
+
+1. Raw parsing
+2. Fewer passes.
+3. Iterative matching
+4. How regex works
+
+```elixir
+
+```
+
+```elixir
+sample = "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))"
+```
+
+```elixir
+String.match?(sample, ~r/(mul\(\d+,\d+\))/)
+```
+
+```elixir
+Regex.scan(~r/mul\((?<left>\d+),(?<right>\d+)\)/, sample)
+```
+
+```elixir
+{a, _} = Integer.parse("12")
+```
+
+```elixir
+defmodule Part1 do
+  def find_and_sum_mults(raw_input) do
+    Regex.scan(~r/mul\((?<left>\d+),(?<right>\d+)\)/, raw_input)
+    |> Enum.map(fn [_, left, right] ->
+      {lnum, _} = Integer.parse(left)
+      {rnum, _} = Integer.parse(right)
+
+      lnum * rnum
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+```elixir
+Part1.find_and_sum_mults(sample) == 161
+```
+
+```elixir
+input = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day3.txt")
+```
+
+```elixir
+Part1.find_and_sum_mults(input)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def run(raw_input) do
+    Regex.scan(~r/mul\((?<left>\d+),(?<right>\d+)\)|do\(\)|don't\(\)/, raw_input)
+      |> Enum.reduce({true, 0}, fn [match | pieces], {is_mul_enabled, sum} ->
+        case match do
+          "don't()" -> {false, sum}
+          "do()" -> {true, sum}
+          _ when is_mul_enabled ->
+            {flag, sm} = pieces 
+              |> Enum.reduce({true, 1}, fn x, {flag, acc} -> 
+                {flag, String.to_integer(x) * acc}
+              end)
+            {flag, sm + sum}
+          _ -> {is_mul_enabled, sum}
+            end
+      end)
+    |> elem(1)
+  end
+end
+```
+
+```elixir
+part2_sample = "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))"
+```
+
+```elixir
+Regex.scan(~r/mul\((?<left>\d+),(?<right>\d+)\)|do\(\)|don't\(\)/, part2_sample, captures: :all_names)
+|> dbg()
+
+[a | b] = ["mul(2,4)", "2", "4"]
+  
+```
+
+```elixir
+Regex.scan(~r/mul\((?<left>\d+),(?<right>\d+)\)|do\(\)|don't\(\)/, part2_sample)
+|> Enum.reduce({true, 0}, fn [match | pieces], {is_mul_enabled, sum} ->
+  dbg(match)
+  dbg(is_mul_enabled)
+  case match do
+    "don't()" -> {false, sum}
+    "do()" -> {true, sum}
+    _ when is_mul_enabled ->
+      {flag, sm} = pieces 
+       |> dbg()
+        |> Enum.reduce({true, 1}, fn x, {flag, acc} -> 
+          {flag, String.to_integer(x) * acc}
+        end)
+      {flag, sm + sum}
+    _ -> {is_mul_enabled, sum}
+      end |> dbg()
+end)
+```
+
+```elixir
+["2", "4"] |> Enum.reduce({true, 1}, fn x, {flag, acc} -> 
+          {flag, String.to_integer(x) * acc}
+        end)
+```
+
+```elixir
+Part2.run(part2_sample)
+```
+
+```elixir
+Part2.run(input)
+```

@@ -1,0 +1,162 @@
+# AoC 2024 - Day 2
+
+## Section
+
+### Possible Improvements:
+
+1. Simpler safety checks
+2. Function shorthands
+3. Perf?
+
+```elixir
+sample = """
+7 6 4 2 1
+1 2 7 8 9
+9 7 6 2 1
+1 3 2 4 5
+8 6 4 4 1
+1 3 6 7 9
+"""
+```
+
+Safety Conditions for each report (row):
+
+1. The levels are either all increasing or all decreasing.
+2. Any two adjacent levels differ by at least one and at most three.
+
+```elixir
+defmodule Part1 do
+  def all_increasing([]) do
+    true
+  end
+  
+  def all_increasing([_]) do
+    true
+  end
+  
+  def all_increasing([first, second]) do
+    first <= second
+  end
+  
+  def all_increasing([first, second, third | rest]) do
+    all_increasing([first, second]) and 
+      all_increasing([second, third]) and
+      all_increasing([third | rest])
+  end
+
+  def all_decreasing([]) do
+    true
+  end
+  
+  def all_decreasing([_]) do
+    true
+  end
+  
+  def all_decreasing([first, second]) do
+    first >= second
+  end
+  
+  def all_decreasing([first, second, third | rest]) do
+    all_decreasing([first, second]) and
+      all_decreasing([second, third]) and
+      all_decreasing([third | rest])
+  end
+
+  def monotonic(levels) do
+    all_increasing(levels) or all_decreasing(levels)
+  end
+
+  def close_diff([]) do
+    true
+  end
+
+  def close_diff([_]) do
+    true
+  end
+
+  def close_diff([first, second]) do
+    diff = abs(first - second)
+    0 < diff and diff < 4
+  end
+
+  def close_diff([first, second, third | rest]) do
+    close_diff([first, second]) and
+      close_diff([second, third]) and
+      close_diff([third | rest])
+  end
+
+  def safe?(levels) do
+    close_diff(levels) and monotonic(levels)
+  end
+
+  def parse_input(raw_input) do
+    raw_input
+      |> String.split("\n")
+      |> Enum.map(fn report -> String.split(report) end)
+      |> Enum.map(fn report ->
+        report
+          |> Enum.map(fn l -> {num, _} = Integer.parse(l); num end)
+      end)
+      |> Enum.reject(fn l -> l == [] end)
+  end
+
+  def count_safe_reports(raw_input) do
+    raw_input
+      |> parse_input()
+      |> Enum.count(&safe?/1)
+  end
+end
+```
+
+```elixir
+Part1.count_safe_reports(sample)
+```
+
+```elixir
+part1_input = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day2.txt")
+```
+
+```elixir
+Part1.count_safe_reports(part1_input)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def report_sampler(levels) do
+    for i <- 0..(Enum.count(levels) - 1) do
+      Enum.with_index(levels)
+        |> Enum.reject(fn {_num, j} -> i == j end)
+        |> Enum.map(fn {num, _} -> num end)
+    end
+  end
+
+  def dampable?(levels) do
+    report_sampler(levels)
+    |> Enum.any?(fn sampled_level -> Part1.safe?(sampled_level) end)
+  end
+
+  def safe_or_dampable?(report) do
+    Part1.safe?(report) or Part2.dampable?(report)
+  end
+
+  def count_dampened_safe_reports(raw_input) do
+    raw_input
+      |> Part1.parse_input()
+      |> Enum.count(&safe_or_dampable?/1)
+  end
+end
+```
+
+```elixir
+Part2.report_sampler([1, 2, 7, 8, 9])
+```
+
+```elixir
+Part2.count_dampened_safe_reports(sample)
+```
+
+```elixir
+Part2.count_dampened_safe_reports(part1_input)
+```
