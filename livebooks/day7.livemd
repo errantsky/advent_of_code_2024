@@ -1,0 +1,272 @@
+# Advent of Code - Day 7
+
+```elixir
+Mix.install([
+  {:flow, "~> 1.2"},
+])
+```
+
+## Part 1
+
+### ToDo:
+
+1. Repeat with regex
+2.
+
+```elixir
+raw_sample = """
+190: 10 19
+3267: 81 40 27
+83: 17 5
+156: 15 6
+7290: 6 8 6 15
+161011: 16 10 13
+192: 17 8 14
+21037: 9 7 18 13
+292: 11 6 16 20
+"""
+```
+
+Each line represents a single equation. The test value appears before the colon on each line; it is your job to determine whether the remaining numbers can be combined with operators to produce the test value.
+
+Operators are always evaluated left-to-right, not according to precedence rules. Furthermore, numbers in the equations cannot be rearranged. Glancing into the jungle, you can see elephants holding two different types of operators: add (+) and multiply (*).
+
+```elixir
+raw_sample
+  |> String.split("\n", trim: true)
+  |> Enum.map( fn line ->
+    [test_val | eq] = line |> String.split(": ")
+    {test_val, eq |> List.first() |> String.split(" ", trim: true)}
+  end)
+```
+
+```elixir
+defmodule Part1 do
+
+  @operators [:sum, :mul]
+  
+  def parse_input(input) do
+    input
+      |> String.split("\n", trim: true)
+      |> Enum.map( fn line ->
+        [test_val | eq] = line |> String.split(": ")
+        
+        eq = eq 
+          |> List.first() 
+          |> String.split(" ", trim: true)
+
+        {test_val |> String.to_integer(), eq |> Enum.map(&String.to_integer(&1))}
+      end)
+  end
+
+  def find_sum(lines) do
+    lines
+      |> Enum.map(&solve(&1))
+      |> Enum.sum()
+  end
+
+  def solve({test_val, eq}) do
+    [first | rest] = eq
+    
+    sol = rest
+      |> length()
+      |> gen_candidates()
+      |> Enum.find_value(fn ops ->
+        res = Enum.zip(ops, rest)
+          |> Enum.reduce(first, fn {op, right}, left ->
+            case op do
+              :sum -> left + right
+              :mul -> left * right
+            end
+          end)
+
+        if test_val == res, do: test_val
+      end)
+
+    case sol do
+      nil -> 0
+      sm -> sm
+    end
+  end
+
+  def gen_candidates(size) do
+    permute(@operators, size, [])
+  end
+
+  def permute(_slots, 0, acc) do
+    [Enum.reverse(acc)]
+  end
+
+  # for slot in slots solve [slot | rest]
+  def permute(slots, size, acc) do
+    slots 
+    |> Enum.flat_map(fn slot ->
+      permute(slots, size - 1, [slot | acc])
+    end)
+  end
+end
+```
+
+```elixir
+Part1.gen_candidates(2)
+```
+
+```elixir
+Part1.solve({190, [10, 12]})
+```
+
+```elixir
+Part1.parse_input(raw_sample)
+  |> dbg()
+  |> Part1.find_sum()
+```
+
+```elixir
+input = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day7.txt")
+  |> Part1.parse_input()
+  |> Part1.find_sum()
+```
+
+## Part 2
+
+A third type of operator.
+
+The concatenation operator (||) combines the digits from its left and right inputs into a single number. For example, 12 || 345 would become 12345. All operators are still evaluated left-to-right.
+
+Sample result: 11387
+
+### ToDo:
+
+1. Parallelize
+2. It worked for the per line
+3. Not working for permute, it gets slower. Needs review.
+4.
+
+```elixir
+defmodule Part2 do
+
+  @operators [:sum, :mul, :concat]
+  
+  def parse_input(input) do
+    input
+      |> String.split("\n", trim: true)
+      |> Enum.map( fn line ->
+        [test_val | eq] = line |> String.split(": ")
+        
+        eq = eq 
+          |> List.first() 
+          |> String.split(" ", trim: true)
+
+        {test_val |> String.to_integer(), eq |> Enum.map(&String.to_integer(&1))}
+      end)
+  end
+
+  def find_sum(lines) do
+    lines
+      |> Enum.map(&solve(&1))
+      |> Enum.sum()
+  end
+
+  def find_sum_parallel(lines) do
+    lines
+      |> Flow.from_enumerable()
+      |> Flow.partition()
+      |> Flow.map(&solve(&1))
+      |> Enum.sum()
+  end  
+
+  def solve({test_val, eq}) do
+    [first | rest] = eq
+    
+    sol = rest
+      |> length()
+      |> gen_candidates()
+      |> Enum.find_value(fn ops ->
+        res = Enum.zip(ops, rest)
+          |> Enum.reduce(first, fn {op, right}, left ->
+            case op do
+              :sum -> left + right
+              :mul -> left * right
+              :concat -> 
+                Integer.to_string(left) <> Integer.to_string(right)
+                |> String.to_integer()
+                end
+          end)
+
+        if test_val == res, do: test_val
+      end)
+
+    case sol do
+      nil -> 0
+      sm -> sm
+    end
+  end
+
+  def gen_candidates(size) do
+    permute(@operators, size, [])
+  end
+
+  def permute(_slots, 0, acc) do
+    [Enum.reverse(acc)]
+  end
+
+  # for slot in slots solve [slot | rest]
+  def permute(slots, size, acc) do
+    slots 
+    |> Enum.flat_map(fn slot ->
+      permute(slots, size - 1, [slot | acc])
+    end)
+  end
+
+  def permute_parallel(_slots, 0, acc) do
+    [Enum.reverse(acc)]
+  end
+
+  def permute_parallel(slots, size, acc) do
+    slots
+      |> Flow.from_enumerable()
+      |> Flow.partition()
+      |> Flow.flat_map(fn slot ->
+        permute(slots, size - 1, [slot | acc])
+      end)
+      |> Enum.to_list()
+  end  
+end
+```
+
+```elixir
+Part2.permute_parallel([:sum, :mul, :concat], 4, [])
+```
+
+```elixir
+Part2.gen_candidates(2)
+```
+
+```elixir
+Integer.to_string(123) <> Integer.to_string(123) 
+|> String.to_integer()
+```
+
+```elixir
+Part2.solve({156, [15, 6]})
+```
+
+```elixir
+Part2.parse_input(raw_sample)
+  |> dbg()
+  |> Part2.find_sum()
+```
+
+```elixir
+# under 9 seconds
+input = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day7.txt")
+  |> Part2.parse_input()
+  |> Part2.find_sum()
+```
+
+```elixir
+# 2.2
+input = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day7.txt")
+  |> Part2.parse_input()
+  |> Part2.find_sum_parallel()
+```
