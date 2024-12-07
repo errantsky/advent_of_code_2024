@@ -1,0 +1,145 @@
+# Advent of Code - Day 5
+
+## Part 1
+
+```elixir
+sample = """
+47|53
+97|13
+97|61
+97|47
+75|29
+61|13
+75|53
+29|13
+97|29
+53|29
+61|53
+97|53
+61|29
+47|13
+75|47
+97|75
+47|61
+75|61
+47|29
+75|13
+53|13
+
+75,47,61,53,29
+97,61,53,29,13
+75,29,13
+75,97,47,61,53
+61,13,29
+97,13,75,29,47
+"""
+
+
+```
+
+```elixir
+{raw_rules, raw_updates} = sample
+  |> String.split("\n", trim: true)
+  |> Enum.split_with(fn e -> String.contains?(e, "|") end)
+
+```
+
+```elixir
+rules = raw_rules
+  |> Enum.map(&String.split(&1, "|"))
+  
+```
+
+```elixir
+
+updates = raw_updates
+  |> Enum.map(&String.split(&1, ","))
+```
+
+Each role x|y says x should be before y
+
+So, at element n of an update with val x:
+
+1. No element in 0..(n-1) should appear in [x|y] rules
+2. No element in (n+1)..(len-1) should appear in [y|x] rules
+
+So, each element needs 2*len checks. How can I reduce this to len or sth around it?
+
+Can I solve this to assume one side of the problem is solved?
+
+1. On the first element, I check 1..(len-1) cells. If any number is in a [y|c0] rule, it's bad
+2. On the second element, if there's a [c1|c0] rule, it's bad.
+   a. for the rest, shouldn't see a [ci|c1] element
+3. asd
+
+```elixir
+left_rules = rules
+  |> Enum.reduce(Map.new(), fn [left, right],map ->  
+    Map.get_and_update(map, left, fn cur_val ->
+        case cur_val do
+          nil -> {cur_val, MapSet.new() |> MapSet.put(right)}
+          _ -> {cur_val, MapSet.put(cur_val, right)}
+        end
+      end) |> elem(1)
+    end)
+    
+```
+
+```elixir
+right_rules = rules
+  |> Enum.reduce(Map.new(), fn [left, right],map ->  
+    Map.get_and_update(map, right, fn cur_val ->
+        case cur_val do
+          nil -> {cur_val, MapSet.new() |> MapSet.put(left)}
+          _ -> {cur_val, MapSet.put(cur_val, left)}
+        end
+      end) |> elem(1)
+    end)
+    
+```
+
+Find the middle page number of each correctly-ordered update.
+143
+
+```elixir
+updates |> hd()
+      |> Enum.with_index()
+      |> Enum.reduce(Map.new(), fn {e, idx}, map ->
+        Map.put(map, idx, e)
+      end)
+updates |> hd() |> length()
+```
+
+```elixir
+defmodule Part1 do
+  def iterate(updates) do
+    updates
+      |> Enum.map(&verify_update(&1))
+      |> Enum.sum()
+  end
+
+  def verify_cell_order(left_rules, right_rules, cell_idx, cell_map, update_len) do
+    for i <- 0..(cell_idx - 1) do
+      cur_cell = cell_map |> Map.fetch!(i)
+      
+    end
+  end
+
+  def verify_update(update) do
+    update_map = update
+      |> Enum.with_index()
+      |> Enum.reduce(Map.new(), fn {e, idx}, map ->
+        Map.put(map, idx, e)
+      end)
+
+    len = update |> length()
+
+    for i <- 0..(len - 1) do
+      
+    end
+  
+    
+    
+  end
+end
+```

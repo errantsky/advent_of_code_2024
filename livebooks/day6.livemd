@@ -1,0 +1,197 @@
+# Advent of Code - Day 6
+
+## Part 1
+
+```elixir
+sample = """
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...
+"""
+
+sample
+  |> String.split("\n", trim: true)
+
+```
+
+```elixir
+"#........." |> String.graphemes()
+```
+
+Lab guards in 1518 follow a very strict patrol protocol which involves repeatedly following these steps:
+
+If there is something directly in front of you, turn right 90 degrees.
+Otherwise, take a step forward.
+
+In this example, the guard will visit 41 distinct positions on your map.
+
+Predict the path of the guard. How many distinct positions will the guard visit before leaving the mapped area?
+
+```elixir
+mat = sample
+  |> String.split("\n", trim: true)
+  |> Enum.with_index()
+  |> Enum.reduce(Map.new(), fn {line, row}, map ->
+    line
+      |> String.graphemes()
+      |> Enum.with_index()
+      |> Enum.reduce(map, fn {cell, col}, map ->
+        Map.put(map, {row, col}, cell)
+    end)
+  end)
+
+```
+
+```elixir
+{init_loc, _} = mat 
+  |> Enum.find(fn {_key, val} -> 
+    val == "^"
+  end)
+```
+
+```elixir
+
+facing = {-1, 0}
+
+```
+
+```elixir
+
+```
+
+```elixir
+defmodule Part1 do
+  def parse_input(input) do
+    input_by_line = input |> String.split("\n", trim: true)
+    
+    rows = input_by_line |> length
+    cols = input_by_line |> Enum.at(0) |> String.length()
+    
+    mat = input
+      |> String.split("\n", trim: true)
+      |> Enum.with_index()
+      |> Enum.reduce(Map.new(), fn {line, row}, map ->
+        line
+          |> String.graphemes()
+          |> Enum.with_index()
+          |> Enum.reduce(map, fn {cell, col}, map ->
+            Map.put(map, {row, col}, cell)
+        end)
+      end)
+
+    {init_loc, _} = mat 
+      |> Enum.find(fn {_key, val} -> 
+        val == "^"
+      end)
+
+
+    {mat, init_loc, {-1, 0}, rows, cols}    
+  end
+  
+  def find_visits(mat, init_loc, facing, rows, cols) do
+    {_reason, _new_loc, visited} = recurse(mat, init_loc, facing, rows, cols, [init_loc])
+    [_ | visited] = visited
+    visited
+  end
+  
+  def recurse(mat, init_loc, facing, rows, cols, visited) do
+    {reason, new_loc, new_visited} = 
+      move_until_obstructed(mat, init_loc, facing, rows, cols, visited)
+    
+    new_facing = case facing do
+          {-1, 0} -> {0, 1}
+          {1, 0} -> {0, -1}
+          {0, 1} -> {+1, 0}
+          {0, -1} -> {-1, 0}
+        end
+    
+    {_reason, _new_loc, _final_visited} = case reason do
+      :obstructed -> 
+        recurse(mat, new_loc, new_facing, rows, cols, new_visited)
+      :out_of_bounds -> 
+        {reason, new_loc, new_visited}
+    end
+  end
+
+  
+  def move_until_obstructed(mat, {cur_x, cur_y} = _cur_loc, facing, rows, cols, visited) do
+    # try to move in the facing direction until out of bounds
+    {facing_x, facing_y} = facing
+    
+    {axis, range} = case facing do
+      {-1, 0} -> {:x, (cur_x-1)..-1//-1} # facing up
+      {1, 0} -> {:x, (cur_x+1)..rows//+1} # facing down  
+      {0, 1} -> {:y, (cur_y+1)..cols//+1} # facing right
+      {0, -1} -> {:y, (cur_y-1)..-1//-1} # facing left
+      _ -> raise "error"
+    end
+
+    case axis do
+      :x ->
+        range
+          |> Enum.reduce_while({:start, {cur_x, cur_y}, visited}, fn new_x, {_, {cx, cy}, visited} ->
+            cond do 
+              cx < 0 or cx >= rows ->
+                [_ | visited] = visited
+                {:halt, {:out_of_bounds, {new_x, cy}, visited}}
+              Map.fetch!(mat, {cx, cy}) == "#" ->
+                [_ | visited] = visited
+                {:halt, {:obstructed, {new_x - 2 * facing_x, cy}, visited}}
+              true -> 
+                {:cont, {:out_of_bounds, {new_x, cy}, [{new_x, cy} | visited]}}
+            end
+          end)
+
+      :y ->
+        range
+          |> Enum.reduce_while({:start, {cur_x, cur_y}, visited}, fn new_y, {_, {cx, cy}, visited} ->
+            cond do 
+              cy < 0 or cy >= cols ->
+                [_ | visited] = visited
+                {:halt, {:out_of_bounds, {cx, new_y}, visited}}
+              Map.fetch!(mat, {cx, cy}) == "#" ->
+                [_ | visited] = visited
+                {:halt, {:obstructed, {cx, new_y - 2 *facing_y}, visited}}
+              true -> 
+                {:cont, {:out_of_bounds, {cx, new_y}, [{cx, new_y} | visited]}}
+            end
+          end)
+      _ -> raise "error"
+    end
+  end
+end
+```
+
+```elixir
+sample
+```
+
+```elixir
+
+with {mat, init_loc, facing, rows, cols} <- Part1.parse_input(sample) do
+  Part1.find_visits(mat, init_loc, facing, rows, cols)
+end
+|> MapSet.new()
+|> MapSet.size()
+
+
+```
+
+```elixir
+input = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day6.txt")
+```
+
+```elixir
+with {mat, init_loc, facing, rows, cols} <- Part1.parse_input(input) do
+  Part1.find_visits(mat, init_loc, facing, rows, cols)
+end
+|> MapSet.new()
+|> MapSet.size()
+```

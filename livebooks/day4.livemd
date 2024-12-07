@@ -1,0 +1,223 @@
+# Advent of Code - Day 4
+
+## Part 1
+
+```elixir
+sample = """
+MMMSXXMASM
+MSAMXMSMSA
+AMXSXMAAMM
+MSAMASMSMX
+XMASAMXAMM
+XXAMMXXAMA
+SMSMSASXSS
+SAXAMASAAA
+MAMMMXMMMM
+MXMXAXMASX
+"""
+```
+
+```elixir
+grid = 
+sample
+  |> String.split("\n", trim: true)
+
+# turn it into a map
+```
+
+```elixir
+defmodule Part1 do
+  def horizontal(grid) do
+    gc = grid
+     
+    rc = grid
+      |> Enum.map(&String.reverse/1)
+
+    rc ++ gc
+  end
+
+  def vertical(grid) do
+    column_strings = vertical_gen(grid)
+
+    gc = column_strings
+
+    rc = column_strings
+      |> Enum.map(&String.reverse/1)
+
+    rc ++ gc
+  end
+
+  def vertical_gen(grid) do
+    cols = String.length(grid |> Enum.at(0))
+
+    for j <- 0..(cols - 1) do
+      grid
+      |> Enum.map(&String.at(&1, j))
+      |> Enum.join()
+    end
+  end
+
+  def right_diagonals(grid) do
+    rows = length(grid)
+    cols = String.length(Enum.at(grid, 0))
+
+    # Collect all right diagonals
+    diags = (for start_col <- 0..(cols - 1), into: [] do
+       extract_diagonal(grid, 0, start_col, 1, 1)
+     end) ++
+    (for start_row <- 1..(rows - 1), into: [] do
+       extract_diagonal(grid, start_row, 0, 1, 1)
+     end)
+
+    (diags
+      |> Enum.map(&String.reverse(&1)))
+      ++ diags
+  end
+
+  def left_diagonals(grid) do
+    rows = length(grid)
+    cols = String.length(Enum.at(grid, 0))
+
+    # Collect all left diagonals
+    diags = (for start_col <- 0..(cols - 1), into: [] do
+       extract_diagonal(grid, 0, start_col, 1, -1)
+     end) ++
+    (for start_row <- 1..(rows - 1), into: [] do
+       extract_diagonal(grid, start_row, cols - 1, 1, -1)
+     end)
+
+    (diags
+      |> Enum.map(&String.reverse(&1)))
+      ++ diags
+  end
+
+  defp extract_diagonal(grid, start_row, start_col, row_step, col_step) do
+    rows = length(grid)
+    cols = String.length(Enum.at(grid, 0))
+
+    Enum.reduce_while(0..(rows - 1), [], fn step, acc ->
+      row = start_row + step * row_step
+      col = start_col + step * col_step
+
+      if row < rows and col >= 0 and col < cols do
+        {:cont, [String.at(Enum.at(grid, row), col) | acc]}
+      else
+        {:halt, acc}
+      end
+    end)
+    |> Enum.reverse()
+    |> Enum.join("")
+  end  
+
+  def count_xmas_in_line(line) do
+    Regex.scan(~r/XMAS/, line) |> Enum.count()
+  end
+
+  def count_all_matches(grid) do
+    (horizontal(grid) ++ vertical(grid) ++ left_diagonals(grid) ++ right_diagonals(grid))
+    |> Enum.reduce(0, fn line, acc -> count_xmas_in_line(line) + acc end)
+  end
+end
+```
+
+```elixir
+Part1.right_diagonals(grid) |> Enum.map(&String.reverse(&1))
+```
+
+```elixir
+Part1.count_all_matches(grid)
+```
+
+```elixir
+day1 = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day4.txt")
+
+day1= day1
+  |> String.split("\n", trim: true)
+
+day1
+  |> Part1.count_all_matches()
+```
+
+## Part 2
+
+```elixir
+sgrid = sample
+  |> String.split("\n", trim: true)
+
+sgrid |> Enum.at(0)
+```
+
+```elixir
+defmodule Part2 do
+  def iterate(grid) do
+    rows = grid |> length()
+    cols = grid |> Enum.at(0) |> String.length()
+
+    mat = grid
+      |> Enum.with_index()
+      |> Enum.map(fn {string, i} -> 
+        String.graphemes(string)
+          |> Enum.with_index()
+          |> Enum.map(fn {char, j} -> {i, j, char} end)
+        end)
+      |> List.flatten()
+      |> Enum.reduce(Map.new(), fn {i, j, char}, map -> Map.put(map, {i, j}, char) end)
+
+    
+    
+    for i <- 1..(rows - 2) do
+      for j <- 1..(cols - 2) do
+        # -1 -1 is M
+        # 0 0 is A
+        # -1 1 S 
+        # 1 -1 M 
+        # 1 1 S 
+        (Map.fetch!(mat, {i - 1, j - 1}) == "M" and
+        Map.fetch!(mat, {i, j}) == "A" and
+        Map.fetch!(mat, {i - 1, j + 1}) == "M" and
+        Map.fetch!(mat, {i + 1, j - 1}) == "S" and
+        Map.fetch!(mat, {i + 1, j + 1}) == "S") or
+          (Map.fetch!(mat, {i - 1, j - 1}) == "M" and
+        Map.fetch!(mat, {i, j}) == "A" and
+        Map.fetch!(mat, {i - 1, j + 1}) == "S" and
+        Map.fetch!(mat, {i + 1, j - 1}) == "M" and
+        Map.fetch!(mat, {i + 1, j + 1}) == "S") or
+          (Map.fetch!(mat, {i - 1, j - 1}) == "S" and
+          Map.fetch!(mat, {i, j}) == "A" and
+          Map.fetch!(mat, {i - 1, j + 1}) == "M" and
+          Map.fetch!(mat, {i + 1, j - 1}) == "S" and
+          Map.fetch!(mat, {i + 1, j + 1}) == "M") or
+        (Map.fetch!(mat, {i - 1, j - 1}) == "S" and
+          Map.fetch!(mat, {i, j}) == "A" and
+          Map.fetch!(mat, {i - 1, j + 1}) == "S" and
+          Map.fetch!(mat, {i + 1, j - 1}) == "M" and
+          Map.fetch!(mat, {i + 1, j + 1}) == "M")
+
+          
+      end
+    end 
+  end
+end
+```
+
+```elixir
+sgrid
+```
+
+```elixir
+Part2.iterate(sgrid)
+```
+
+```elixir
+Part2.iterate(sgrid)
+|> List.flatten()
+|> Enum.count(fn b -> b end)
+
+```
+
+```elixir
+Part2.iterate(day1)
+|> List.flatten()
+|> Enum.count(fn b -> b end)
+
+```
