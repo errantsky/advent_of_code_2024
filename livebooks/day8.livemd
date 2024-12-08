@@ -1,0 +1,243 @@
+# Advent of Code - Day 8
+
+## Part 1
+
+An antinode occurs at any point that is perfectly in line with two antennas of the same frequency - but only when one of the antennas is twice as far away as the other. This means that for any pair of antennas with the same frequency, there are two antinodes, one on either side of them.
+
+<!-- livebook:{"break_markdown":true} -->
+
+### ToDo:
+
+1. Compile patterns
+2.
+
+```elixir
+raw_sample = """
+............
+........0...
+.....0......
+.......0....
+....0.......
+......A.....
+............
+............
+........A...
+.........A..
+............
+............
+"""
+```
+
+```elixir
+raw_input = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day8.txt")
+```
+
+```elixir
+mat =
+  raw_sample
+  |> String.split("\n", trim: true)
+  |> Enum.with_index()
+  |> Enum.reduce(%{}, fn {line, i}, mat ->
+    line
+    |> String.graphemes()
+    |> Enum.with_index()
+    |> Enum.reduce(mat, fn {cell, j}, mat ->
+      case cell do
+        "." ->
+          mat
+
+        freq ->
+          Map.put(mat, {i, j}, freq)
+      end
+    end)
+  end)
+```
+
+```elixir
+grouped_map = mat
+  |> Enum.reduce(%{}, fn {coords, freq}, map ->
+    Map.update(map, freq, [coords], fn list -> [coords | list] end)
+  end)
+```
+
+```elixir
+# for group
+# iterate over every 2 element combination
+# compute antinodes
+```
+
+```elixir
+for x <- [{4, 4}, {3, 7}, {2, 5}, {1, 8}], y <- [{4, 4}, {3, 7}, {2, 5}, {1, 8}], x != y do
+  {x, y}
+end
+```
+
+```elixir
+defmodule Part1 do
+  def parse_input(input) do
+    lines = input
+      |> String.split("\n", trim: true)
+
+    rows = lines |> length()
+    cols = lines |> hd() |> String.graphemes() |> length()
+    
+    mat =
+      input
+      |> String.split("\n", trim: true)
+      |> Enum.with_index()
+      |> Enum.reduce(%{}, fn {line, i}, mat ->
+        line
+        |> String.graphemes()
+        |> Enum.with_index()
+        |> Enum.reduce(mat, fn {cell, j}, mat ->
+          case cell do
+            "." ->
+              mat
+
+            freq ->
+              Map.put(mat, {i, j}, freq)
+          end
+        end)
+      end)
+
+    grouped_map =
+      mat
+      |> Enum.reduce(%{}, fn {coords, freq}, map ->
+        Map.update(map, freq, [coords], fn list -> [coords | list] end)
+      end)
+
+    {grouped_map, rows, cols}
+  end
+
+  def solve(raw_input) do
+    {grouped_map, rows, cols} = parse_input(raw_input)
+
+    grouped_map
+    |> Enum.map(fn {_freq, coords} ->
+      coords
+      |> combinations()
+      |> Enum.map(&find_antinode(&1))
+    end)
+    |> Enum.concat()
+    |> Enum.reject(fn {x, y} ->
+      x < 0 || y < 0 || x >= rows || y >= cols
+    end)
+    |> MapSet.new()
+    |> MapSet.size()
+  end
+
+  def find_antinode({{i, j}, {k, l}}) do
+    l_from_r_x_dist = i - k
+    l_from_r_y_dist = j - l
+
+    left_antinode_x = i - 2 * l_from_r_x_dist
+    left_antinode_y = j - 2 * l_from_r_y_dist
+
+    {left_antinode_x, left_antinode_y}
+  end
+
+  def combinations(items) do
+    for left_node <- items, right_node <- items, left_node != right_node do
+      {left_node, right_node}
+    end
+  end
+end
+```
+
+```elixir
+Part1.solve(raw_sample)
+```
+
+```elixir
+Part1.solve(raw_input)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def parse_input(input) do
+    lines = input
+      |> String.split("\n", trim: true)
+
+    rows = lines |> length()
+    cols = lines |> hd() |> String.graphemes() |> length()
+    
+    mat =
+      input
+      |> String.split("\n", trim: true)
+      |> Enum.with_index()
+      |> Enum.reduce(%{}, fn {line, i}, mat ->
+        line
+        |> String.graphemes()
+        |> Enum.with_index()
+        |> Enum.reduce(mat, fn {cell, j}, mat ->
+          case cell do
+            "." ->
+              mat
+
+            freq ->
+              Map.put(mat, {i, j}, freq)
+          end
+        end)
+      end)
+
+    grouped_map =
+      mat
+      |> Enum.reduce(%{}, fn {coords, freq}, map ->
+        Map.update(map, freq, [coords], fn list -> [coords | list] end)
+      end)
+
+    {grouped_map, rows, cols}
+  end
+
+  def solve(raw_input) do
+    {grouped_map, rows, cols} = parse_input(raw_input)
+
+    grouped_map
+    |> Enum.map(fn {_freq, coords} ->
+      coords
+      |> combinations()
+      |> Enum.flat_map(&find_antinode(&1, rows, cols))
+    end)
+    |> Enum.concat()
+    |> Enum.reject(fn {x, y} ->
+      x < 0 || y < 0 || x >= rows || y >= cols
+    end)
+    |> MapSet.new()
+    |> MapSet.size()
+  end
+
+  def find_antinode({{i, j}, {k, l}}, rows, cols) do
+    l_from_r_x_dist = i - k
+    l_from_r_y_dist = j - l
+
+    Stream.iterate(1, & &1 + 1)
+    |> Enum.reduce_while([], fn multiplier, acc ->
+      left_antinode_x = i - multiplier * l_from_r_x_dist
+      left_antinode_y = j - multiplier * l_from_r_y_dist
+
+      if left_antinode_x < 0 || left_antinode_y < 0 || 
+        left_antinode_x >= rows || left_antinode_y >= cols do
+        {:halt, acc}
+      else
+        {:cont, [{left_antinode_x, left_antinode_y} | acc]}
+      end
+    end)
+  end
+
+  def combinations(items) do
+    for left_node <- items, right_node <- items, left_node != right_node do
+      {left_node, right_node}
+    end
+  end
+end
+```
+
+```elixir
+Part2.solve(raw_sample)
+```
+
+```elixir
+Part2.solve(raw_input)
+```
