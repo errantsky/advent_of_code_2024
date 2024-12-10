@@ -33,10 +33,6 @@ Continuing the first example, the first few blocks' position multiplied by its f
 Compact the amphipod's hard drive using the process he requested. What is the resulting filesystem checksum?
 
 ```elixir
-List.duplicate(0, 12)
-```
-
-```elixir
 {_, list} = raw_sample
 |> String.graphemes()
 |> Enum.with_index()
@@ -69,20 +65,15 @@ end)
 ```
 
 ```elixir
-# two pointers
-
-
-
-map |> Map.keys() |> length()
-```
-
-```elixir
 defmodule Part1 do
   def leftmost_free_space(map, start) do
-    size = map |> Map.keys() |> length()
-    start..(size - 1)
+    Stream.iterate(start, & &1 + 1)
     |> Enum.find_value(fn i ->
-      if Map.fetch!(map, i) == ".", do: i
+      case Map.get(map, i) do
+        nil -> i - 1
+        "." -> i
+        _ -> false
+      end
     end)
   end
 
@@ -112,12 +103,6 @@ defmodule Part1 do
     list
     |> Enum.reverse()
     |> Enum.flat_map(fn x -> x end)
-    
-    flat_list = list
-    |> Enum.reverse()
-    |> Enum.flat_map(fn x -> x end)
-    
-    flat_list
     |> Enum.with_index()
     |> Enum.reduce(%{}, fn {e, i}, map ->
       Map.put(map, i, e)
@@ -204,5 +189,8 @@ File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_202
 ```
 
 ```elixir
-Part1.parse_input("90909")
+Part1.parse_input("0")
+|> Part1.solve()
+|> dbg()
+|> Part1.find_sum()
 ```
