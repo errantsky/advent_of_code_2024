@@ -182,6 +182,150 @@ File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_202
 
 ## Part 2
 
-```elixir
+Attempt to move whole files to the leftmost span of free space blocks that could fit the file. Attempt to move each file exactly once in order of decreasing file ID number starting with the file with the highest file ID number. If there is no span of free space to the left of a file that is large enough to fit the file, the file does not move.
 
+The first example from above now proceeds differently:
+
+```
+00...111...2...333.44.5555.6666.777.888899
+0099.111...2...333.44.5555.6666.777.8888..
+0099.1117772...333.44.5555.6666.....8888..
+0099.111777244.333....5555.6666.....8888..
+00992111777.44.333....5555.6666.....8888..
+```
+
+The process of updating the filesystem checksum is the same; now, this example's checksum would be 2858.
+
+```elixir
+defmodule Part2 do
+  def leftmost_free_space(map, block_size) do
+    Stream.iterate(0, &(&1 + 1))
+    |> Enum.find_value(fn i ->
+      case Map.get(map, i) do
+        nil -> -1
+        {:free, nil, free_size} -> 
+          if free_size >= block_size do
+            i
+          else
+            false
+          end
+        _ -> false
+      end
+    end)
+  end
+
+  def rightmost_data_block(map, start) do
+    start..0//-1
+    |> Enum.find_value(fn i ->
+      case Map.get(map, i) do
+        nil -> -1
+        {:free, nil, _free_size} -> false
+        _ -> i
+      end
+    end)
+  end
+
+  def parse_input(input) do
+    {_, list} =
+      input
+      |> String.graphemes()
+      |> Enum.with_index()
+      |> Enum.reduce({0, []}, fn {block_size, i}, {acc, list} ->
+        block_size = String.to_integer(block_size)
+
+        case rem(i, 2) do
+          0 ->
+            {acc + 1, [{:data, acc, block_size} | list]}
+          1 ->
+            {acc, [{:free, nil, block_size} | list]}
+        end
+      end)
+
+    list
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.reduce(%{}, fn {t, idx}, map -> Map.put(map, idx, t) end)
+  end
+
+  def solve(map) do
+    size = map |> Map.keys() |> length()
+
+    recurse(map, 0, size - 1)
+  end
+
+  def find_sum(map) do
+    map
+    |> Enum.reduce(0, fn {k, v}, acc ->
+      case v do
+        "." -> acc
+        _ -> acc + k * v
+      end
+    end)
+  end
+
+  def recurse(map, left, right) when left >= right do
+    map
+  end
+
+  def recurse(map, left, right) do
+    le = Map.fetch!(map, left)
+    re = Map.fetch!(map, right)
+
+    case le do
+      "." ->
+        case re do
+          "." ->
+            right = rightmost_data_block(map, right - 1)
+            case right do
+              nil -> map
+              _ -> recurse(map, left, right)
+            end      
+          _ ->
+            {_, nil, free_size} = left
+            {_, idx, block_size} = right
+            leftover_free_size = free_size - block_size
+
+            # update free index to point to block
+            # if leftover more than 0
+            # update the next block with the leftover free space
+            # shift everything to the right
+
+            # need to account for leftover free space
+            # Might need to reset the left and right
+            
+
+            recurse(map, left + 1, right - 1)
+        end
+
+      _ ->
+        left = leftmost_free_space(map, right |> Enum.at(2))
+        case left do
+          nil -> map
+          _ -> recurse(map, left, right)
+        end
+    end
+  end
+end
+```
+
+```elixir
+raw_sample
+```
+
+```elixir
+Part2.parse_input(raw_sample)
+```
+
+```elixir
+Part2.parse_input(raw_sample)
+|> Part2.leftmost_free_space(3)
+```
+
+```elixir
+raw_sample |> String.graphemes() |> length()
+```
+
+```elixir
+Part2.parse_input(raw_sample)
+|> Part2.rightmost_data_block(raw_sample |> String.graphemes() |> length() |> Kernel.-(1))
 ```
