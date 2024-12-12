@@ -94,32 +94,15 @@ defmodule Part1 do
   end
 
   def solve(stones, times) do
-    table = :ets.new(:stone_mutations, [:set, :public, read_concurrency: true])
-
     1..times
     |> Enum.reduce(stones, fn _, stones ->
       stones
       |> Enum.flat_map(fn stone ->
-        case :ets.lookup(table, stone) do
-          [{_stone, mutated_stones}] ->
-            mutated_stones
-
-          [] ->
-            mutated_stones = mutate(stone)
-            :ets.insert(table, {stone, mutated_stones})
-            mutated_stones
-        end
+        mutate(stone)
       end)
     end)
   end
 end
-```
-
-```elixir
-t = :ets.new(:test, [:set, :protected])
-:ets.insert(t, {12, 12})
-:ets.lookup(t, 12)
-
 ```
 
 ```elixir
@@ -154,11 +137,65 @@ File.read!(
 
 ## Part 2
 
+Need to make the blink number part of the recursion
+hint: map of counts
+
+```elixir
+defmodule Part2 do
+  def parse_input(input) do
+    input
+    |> String.trim("\n")
+    |> String.split(" ", trim: true)
+  end
+
+  def mutate(stone) do
+    stone_num = stone |> String.to_integer()
+    digits = stone |> String.graphemes()
+
+    cond do
+      stone_num == 0 ->
+        ["1"]
+
+      digits |> length() |> rem(2) == 0 ->
+        digit_count = digits |> length()
+        {left, right} = digits |> Enum.split(div(digit_count, 2))
+
+        left_stone = left |> Enum.join()
+        right_stone = right |> Enum.join() |> String.to_integer() |> Integer.to_string()
+
+        [left_stone, right_stone]
+
+      true ->
+        [(stone_num * 2024) |> Integer.to_string()]
+    end
+  end
+
+  def solve(stones, times) do
+    1..times
+    |> Enum.reduce(stones, fn _, stones ->
+      stones
+      |> Enum.flat_map(fn stone ->
+        mutate(stone)
+      end)
+    end)
+  end
+end
+```
+
 ```elixir
 File.read!(
   "/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day11.txt"
 )
-|> Part1.parse_input()
-|> Part1.solve(75)
+|> Part2.parse_input()
+|> Part2.solve(25)
+|> length()
+```
+
+```elixir
+File.read!(
+  "/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day11.txt"
+)
+|> Part2.parse_input()
+|> Part2.solve(75)
 |> length()
 ```
