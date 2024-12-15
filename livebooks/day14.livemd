@@ -1,5 +1,11 @@
 # Advent of Code - Day 14
 
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.0"}
+])
+```
+
 ## Part 1
 
 ```elixir
@@ -44,23 +50,6 @@ To determine the safest area, count the number of robots in each quadrant after 
 Predict the motion of the robots in your list within a space which is 101 tiles wide and 103 tiles tall. What will the safety factor be after exactly 100 seconds have elapsed?
 
 ```elixir
-pat = ~r/p=(?<px>-?\d+),(?<py>-?\d+) v=(?<vx>-?\d+),(?<vy>-?\d+)/
-Regex.named_captures(pat, "p=0,4 v=3,-3")
-```
-
-```elixir
-Regex.scan(pat, raw_sample)
-```
-
-```elixir
-raw_sample
-|> String.split("\n", trim: true)
-|> Enum.map(fn line ->
-  
-end)
-```
-
-```elixir
 defmodule Part1 do
   def parse_input(input) do
     pattern = ~r/p=(?<px>-?\d+),(?<py>-?\d+) v=(?<vx>-?\d+),(?<vy>-?\d+)/
@@ -103,7 +92,7 @@ defmodule Part1 do
       robot_list
       |> Enum.reject(fn {{px, py}, _} ->
         px == mid_x or py == mid_y
-        end) |> dbg()
+        end)
 
     # quad 1
     q1 =
@@ -160,11 +149,20 @@ defmodule Part1 do
       map
     end)
 
-    for j <- 0..(cols - 1), into: [] do
+    list = for j <- 0..(cols - 1), into: [] do
       for i <- 0..(rows - 1), into: [] do
-        map[{i, j}]
+        case map[{i, j}] do
+          0 -> "."
+          _ -> "X"
+        end
       end
     end
+
+    list
+    |> Enum.map(fn line ->
+      line |> Enum.join(" ")
+    end)
+    |> Enum.join("\n")
   end
 end
 ```
@@ -186,7 +184,7 @@ robots = raw_sample
 |> Part1.parse_input()
 |> Part1.after_n(100, 11, 7)
 |> Part1.find_result(11, 7)
-# |> Part1.viz(11, 7)
+
 ```
 
 ```elixir
@@ -194,13 +192,87 @@ File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_202
 |> Part1.parse_input()
 |> Part1.after_n(100, 101, 103)
 |> Part1.find_result(101, 103)
-# |> Part1.viz(11, 7)
+
 ```
 
 ```elixir
-"p=2,4 v=2,-3"
-|> Part1.parse_input()
-|> Part1.after_n(5, 11, 7)
-# |> Part1.find_result(11, 7)
+
+```
+
+```elixir
+viz = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14.txt")
+|> Part1.parse_input()  
+|> Part1.after_n(100, 101, 103)
+|> Part1.viz(101, 103)
+
+# File.write!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14-viz.txt", viz)
+
+```
+
+```elixir
+import Kino.Shorts
+```
+
+78
+181
+
+103
+
+12
+113
+
+111
+
+```elixir
+
+```
+
+```elixir
+src = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14.txt")
+|> Part1.parse_input()  
+
+```
+
+```elixir
+12..12
+|> Kino.animate(fn i ->
+  Process.sleep(500)
+  vz = src
+  |> Part1.after_n(i + 1, 101, 103)
+  |> Part1.viz(101, 103)
+
+  Kino.Markdown.new("**Iteration: #{i}**\n\n" <> vz)
+end)
+```
+
+```elixir
+next
+```
+
+```elixir
+
+# Initialize a counter to 0
+counter = 0
+
+# Create a button with the label "Next"
+button = Kino.Control.button("Next")
+
+# Create a Kino.Markdown widget to display the text
+markdown = Kino.Markdown.new("Click the button to start counting!")
+
+# Display the button and the markdown in the notebook
+Kino.Layout.grid([button, markdown])
+
+# Set up an event listener for the button
+Kino.Control.on_click(button, fn _ ->
+  # Increment the counter
+  counter = counter + 1
+  
+  # Generate the text based on the count
+  text = "Button clicked #{counter} time#{if counter == 1, do: "", else: "s"}!"
+  
+  # Update the Markdown content
+  Kino.Markdown.update(markdown, text)
+end)
 
 ```
