@@ -1,0 +1,206 @@
+# Advent of Code - Day 14
+
+## Part 1
+
+```elixir
+raw_sample = """
+p=0,4 v=3,-3
+p=6,3 v=-1,-3
+p=10,3 v=-1,2
+p=2,0 v=2,-1
+p=0,0 v=1,3
+p=3,0 v=-2,-2
+p=7,6 v=-1,-3
+p=3,0 v=-1,-2
+p=9,3 v=2,3
+p=7,3 v=-1,2
+p=2,4 v=2,-3
+p=9,5 v=-3,-3
+"""
+```
+
+You'll need a way to predict where the robots will be in the future. Fortunately, they all seem to be moving on the tile floor in predictable straight lines.
+
+You make a list (your puzzle input) of all of the robots' current positions (p) and velocities (v), one robot per line.
+
+Each robot's velocity is given as v=x,y where x and y are given in tiles per second. Positive x means the robot is moving to the right, and positive y means the robot is moving down. So, a velocity of v=1,-2 means that each second, the robot moves 1 tile to the right and 2 tiles up.
+
+When a robot would run into an edge of the space they're in, they instead teleport to the other side,
+
+The robots outside the actual bathroom are in a space which is 101 tiles wide and 103 tiles tall (when viewed from above). However, in this example, the robots are in a space which is only 11 tiles wide and 7 tiles tall.
+
+To determine the safest area, count the number of robots in each quadrant after 100 seconds. Robots that are exactly in the middle (horizontally or vertically) don't count as being in any quadrant, so the only relevant robots are:
+
+```
+..... 2..1.
+..... .....
+1.... .....
+           
+..... .....
+...12 .....
+.1... 1....
+```
+
+Predict the motion of the robots in your list within a space which is 101 tiles wide and 103 tiles tall. What will the safety factor be after exactly 100 seconds have elapsed?
+
+```elixir
+pat = ~r/p=(?<px>-?\d+),(?<py>-?\d+) v=(?<vx>-?\d+),(?<vy>-?\d+)/
+Regex.named_captures(pat, "p=0,4 v=3,-3")
+```
+
+```elixir
+Regex.scan(pat, raw_sample)
+```
+
+```elixir
+raw_sample
+|> String.split("\n", trim: true)
+|> Enum.map(fn line ->
+  
+end)
+```
+
+```elixir
+defmodule Part1 do
+  def parse_input(input) do
+    pattern = ~r/p=(?<px>-?\d+),(?<py>-?\d+) v=(?<vx>-?\d+),(?<vy>-?\d+)/
+
+    Regex.scan(pattern, input)
+    |> Enum.map(fn match ->
+      parsed_list =
+        match
+        |> tl()
+        |> Enum.map(&String.to_integer(&1))
+
+      [px, py, vx, vy] = parsed_list
+      {{px, py}, {vx, vy}}
+    end)
+  end
+
+  def after_n(robot_list, times, rows, cols) do
+    1..times
+    |> Enum.reduce(robot_list, fn _, rlist ->
+      blink(rlist, rows, cols)
+    end)
+  end
+
+  def blink(robot_list, rows, cols) do
+    Enum.map(robot_list, fn robot ->
+      {{px, py}, {vx, vy}} = robot
+
+      {{
+         (px + vx) |> Integer.mod(rows),
+         (py + vy) |> Integer.mod(cols)
+       }, {vx, vy}}
+    end)
+  end
+
+  def find_result(robot_list, rows, cols) do
+    mid_x = div(rows, 2)
+    mid_y = div(cols, 2)
+
+    selected_robots =
+      robot_list
+      |> Enum.reject(fn {{px, py}, _} ->
+        px == mid_x or py == mid_y
+        end) |> dbg()
+
+    # quad 1
+    q1 =
+      selected_robots
+      |> Enum.filter(fn {{px, py}, _} ->
+        px < mid_x and py < mid_y
+      end)
+      |> Enum.count()
+
+    # quad 2
+    q2 =
+      selected_robots
+      |> Enum.filter(fn {{px, py}, _} ->
+        px < mid_x and py > mid_y
+      end)
+      |> Enum.count()
+
+    # quad 3
+    q3 =
+      selected_robots
+      |> Enum.filter(fn {{px, py}, _} ->
+        px > mid_x and py < mid_y
+      end)
+      |> Enum.count()
+
+    # quad 4
+    q4 =
+      selected_robots
+      |> Enum.filter(fn {{px, py}, _} ->
+        px > mid_x and py > mid_y
+      end)
+      |> Enum.count()
+
+    {q1, q2, q3, q4, q1 * q2 * q3 * q4}
+  end
+
+  def viz(robot_list, rows, cols) do
+    map =
+      for i <- 0..(rows - 1), j <- 0..(cols - 1), into: %{} do
+        {{i, j}, 0}
+      end
+
+    map = robot_list
+    |> Enum.reduce(map, fn {p, _}, acc ->
+      {_, map} =
+        Map.get_and_update!(
+          acc,
+          p,
+          fn current_value ->
+            {current_value, current_value + 1}
+          end
+        )
+
+      map
+    end)
+
+    for j <- 0..(cols - 1), into: [] do
+      for i <- 0..(rows - 1), into: [] do
+        map[{i, j}]
+      end
+    end
+  end
+end
+```
+
+```elixir
+div(11, 2)
+```
+
+```elixir
+robots = raw_sample
+|> Part1.parse_input()
+|> Part1.after_n(100, 11, 7)
+|> Part1.find_result(11, 7)
+# |> Part1.viz(11, 7)
+```
+
+```elixir
+robots = raw_sample
+|> Part1.parse_input()
+|> Part1.after_n(100, 11, 7)
+|> Part1.find_result(11, 7)
+# |> Part1.viz(11, 7)
+```
+
+```elixir
+File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14.txt")
+|> Part1.parse_input()
+|> Part1.after_n(100, 101, 103)
+|> Part1.find_result(101, 103)
+# |> Part1.viz(11, 7)
+```
+
+```elixir
+"p=2,4 v=2,-3"
+|> Part1.parse_input()
+|> Part1.after_n(5, 11, 7)
+# |> Part1.find_result(11, 7)
+
+```
