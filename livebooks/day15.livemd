@@ -194,30 +194,43 @@ defmodule Part1 do
           {map, new_rloc}
 
         "O" ->
-          {_visited, new_map, _new_val} =
+          candidates =
             Stream.iterate({rx + 2 * dx, ry + 2 * dy}, fn {x, y} -> {x + dx, y + dy} end)
             |> Enum.take_while(fn loc ->
-              Map.get(map, loc)
-              |> (&(not is_nil(&1))).()
+              cell = Map.get(map, loc)
+              not is_nil(cell) and cell != "#"
             end)
-            # not yet correct
-            |> Enum.take_while(&(Map.get(map, &1) != "."))
-            |> Enum.reduce({[], map, "O"}, fn loc, {visited, map, prev_val} ->
-              new_val = map[loc]
 
-              map =
-                map
-                |> Map.put(loc, prev_val)
+          empty_space_idx =
+            Enum.find_index(candidates, fn c ->
+              Map.get(map, c) == "."
+            end)
 
-              {[loc | visited], map, new_val}
-              end) |> dbg()
+          case empty_space_idx do
+            nil ->
+              {map, rloc}
 
-          new_map =
-            new_map
-            |> Map.put(rloc, ".")
-            |> Map.put(new_rloc, "@")
+            empty_idx ->
+              {_visited, new_map, _new_val} = candidates
+              |> Enum.take(empty_idx + 1)
+              |> Enum.reduce({[], map, "O"}, fn loc, {visited, map, prev_val} ->
+                new_val = map[loc]
 
-          {new_map, new_rloc}
+                map =
+                  map
+                  |> Map.put(loc, prev_val)
+
+                {[loc | visited], map, new_val}
+              end)
+              |> dbg()
+
+              new_map =
+                new_map
+                |> Map.put(rloc, ".")
+                |> Map.put(new_rloc, "@")
+
+              {new_map, new_rloc}
+          end
       end
   end
 
@@ -233,7 +246,22 @@ defmodule Part1 do
     end
     |> Enum.join("\n")
   end
+
+  def find_coords_sum(map) do
+    box_coords = map |> Enum.filter(fn {_loc, val} -> val == "O" end)
+      |> Enum.map(fn {loc, _val} -> loc end)
+
+    box_coords
+    |> dbg()
+    |> Enum.reduce(0, fn {x, y}, acc ->
+      acc + (100 * x + y)
+    end)
+  end
 end
+```
+
+```elixir
+
 ```
 
 ```elixir
@@ -241,7 +269,14 @@ end
 ```
 
 ```elixir
-robot_loc = map |> Map.filter(fn {_k, v} -> v == "@" end) |> Enum.at(0) |> elem(0)
+"""
+#######
+#...O..
+#......
+"""
+|> Part1.parse_input()
+|> elem(0)
+|> Part1.find_coords_sum()
 ```
 
 ```elixir
@@ -285,5 +320,29 @@ raw_small_sample
 |> Part1.iterate()
 |> elem(0)
 |> Part1.viz()
+|> IO.puts()
+```
 
+```elixir
+raw_sample
+|> Part1.parse_input()
+|> Part1.iterate()
+|> elem(0)
+# |> Part1.viz()
+# |> IO.puts()
+|> Part1.find_coords_sum()
+```
+
+The GPS coordinate of a box is equal to 100 times its distance from the top edge of the map plus its distance from the left edge of the map. (This process does not stop at wall tiles; measure all the way to the edges of the map.)
+
+The lanternfish would like to know the sum of all boxes' GPS coordinates after the robot finishes moving. In the larger example, the sum of all boxes' GPS coordinates is `10092`. In the smaller example, the sum is `2028`.
+
+```elixir
+File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day15.txt")
+|> Part1.parse_input()
+|> Part1.iterate()
+|> elem(0)
+# |> Part1.viz()
+# |> IO.puts()
+|> Part1.find_coords_sum()
 ```
