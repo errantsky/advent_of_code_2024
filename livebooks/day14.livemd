@@ -8,6 +8,11 @@ Mix.install([
 
 ## Part 1
 
+### ToDo
+
+1. Rewrite so the loop does not compute from zero
+2.
+
 ```elixir
 raw_sample = """
 p=0,4 v=3,-3
@@ -92,7 +97,7 @@ defmodule Part1 do
       robot_list
       |> Enum.reject(fn {{px, py}, _} ->
         px == mid_x or py == mid_y
-        end)
+      end)
 
     # quad 1
     q1 =
@@ -129,46 +134,71 @@ defmodule Part1 do
     {q1, q2, q3, q4, q1 * q2 * q3 * q4}
   end
 
-  def viz(robot_list, rows, cols) do
+  def viz(robot_list, rows, cols, format \\ :readable) do
     map =
       for i <- 0..(rows - 1), j <- 0..(cols - 1), into: %{} do
         {{i, j}, 0}
       end
 
-    map = robot_list
-    |> Enum.reduce(map, fn {p, _}, acc ->
-      {_, map} =
-        Map.get_and_update!(
-          acc,
-          p,
-          fn current_value ->
-            {current_value, current_value + 1}
+    map =
+      robot_list
+      |> Enum.reduce(map, fn {p, _}, acc ->
+        {_, map} =
+          Map.get_and_update!(
+            acc,
+            p,
+            fn current_value ->
+              {current_value, current_value + 1}
+            end
+          )
+
+        map
+      end)
+
+    case format do
+      :readable ->
+        list =
+          for j <- 0..(cols - 1), into: [] do
+            for i <- 0..(rows - 1), into: [] do
+              case map[{i, j}] do
+                0 -> "."
+                _ -> "X"
+              end
+            end
           end
-        )
 
-      map
-    end)
+        list
+        |> Enum.map(fn line ->
+          line |> Enum.join(" ")
+        end)
+        |> Enum.join("\n")
 
-    list = for j <- 0..(cols - 1), into: [] do
-      for i <- 0..(rows - 1), into: [] do
-        case map[{i, j}] do
-          0 -> "."
-          _ -> "X"
-        end
-      end
+      :raw ->
+        list =
+          for j <- 0..(cols - 1), into: [] do
+            for i <- 0..(rows - 1), into: [] do
+              map[{i, j}]
+            end
+          end
     end
+  end
 
-    list
-    |> Enum.map(fn line ->
-      line |> Enum.join(" ")
+  def count_overlapping(raw_viz) do
+    raw_viz
+    |> Enum.flat_map(fn row ->
+      row |> Enum.filter(& &1 > 1)
     end)
-    |> Enum.join("\n")
+    |> Enum.count()
   end
 end
 ```
 
 ```elixir
-div(11, 2)
+robots = raw_sample
+|> Part1.parse_input()
+|> Part1.after_n(100, 11, 7)
+|> Part1.viz(11, 7, :raw)
+|> Part1.count_overlapping()
 ```
 
 ```elixir
@@ -196,20 +226,6 @@ File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_202
 ```
 
 ```elixir
-
-```
-
-```elixir
-viz = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14.txt")
-|> Part1.parse_input()  
-|> Part1.after_n(100, 101, 103)
-|> Part1.viz(101, 103)
-
-# File.write!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14-viz.txt", viz)
-
-```
-
-```elixir
 import Kino.Shorts
 ```
 
@@ -228,20 +244,45 @@ import Kino.Shorts
 ```
 
 ```elixir
-src = File.read!("/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14.txt")
-|> Part1.parse_input()  
+src =
+  File.read!(
+    "/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14.txt"
+  )
+  |> Part1.parse_input()
+
+res = src
+|> Part1.after_n(215, 101, 103)
+|> Part1.viz(101, 103)
+
+File.write!(
+  "/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day14-viz.txt",
+  res
+)
+```
+
+```elixir
+1..5000
+|> Enum.map(fn i ->
+  vz = src
+  |> Part1.after_n(i + 1, 101, 103)
+  |> Part1.viz(101, 103, :raw)
+  |> Part1.count_overlapping()
+
+  [vz, i]
+end)
+|> Enum.min_by(fn [c, _] -> c end)
 
 ```
 
 ```elixir
-12..12
+501..510
 |> Kino.animate(fn i ->
   Process.sleep(500)
   vz = src
   |> Part1.after_n(i + 1, 101, 103)
   |> Part1.viz(101, 103)
 
-  Kino.Markdown.new("**Iteration: #{i}**\n\n" <> vz)
+  Kino.Markdown.new("**Iteration: #{i + 1}**\n\n" <> vz)
 end)
 ```
 

@@ -1,0 +1,289 @@
+# Advent of Code - Day 15
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.0"}
+])
+
+```
+
+## Part 1
+
+```elixir
+raw_sample = """
+##########
+#..O..O.O#
+#......O.#
+#.OO..O.O#
+#..O@..O.#
+#O#..O...#
+#O..O..O.#
+#.OO.O.OO#
+#....O...#
+##########
+
+<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+>^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+"""
+
+
+
+  
+```
+
+As the robot `(@)` attempts to move, if there are any boxes (O) in the way,
+  the robot will also attempt to push those boxes. However, if this action would cause the
+
+```
+robot or a box to move into a wall `(#)`, nothing moves instead, including the robot.
+  The initial positions of these are shown on the map at the top of the document the 
+    lanternfish gave you.
+```
+
+The rest of the document describes the moves (^ for up, v for down, < for left, > for right) that the robot will attempt to make, in order. (The moves form a single giant sequence; they are broken into multiple lines just to make copy-pasting easier. Newlines within the move sequence should be ignored.)
+
+Here is a smaller example to get started:
+
+The lanternfish already have a map of the warehouse and a list of movements the robot will attempt to make (your puzzle input). The problem is that the movements will sometimes fail as boxes are shifted around, making the actual movements of the robot difficult to predict.
+
+For example:
+
+```
+##########
+#..O..O.O#
+#......O.#
+#.OO..O.O#
+#..O@..O.#
+#O#..O...#
+#O..O..O.#
+#.OO.O.OO#
+#....O...#
+##########
+
+<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+>^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+```
+
+```elixir
+raw_small_sample = """
+########
+#..O.O.#
+##@.O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+<^^>>>vv<v>>v<<
+"""
+
+raw_small_result = """
+##########
+#.O.O.OOO#
+#........#
+#OO......#
+#OO@.....#
+#O#.....O#
+#O.....OO#
+#O.....OO#
+#OO....OO#
+##########
+"""
+```
+
+The GPS coordinate of a box is equal to 100 times its distance from the top edge of the map plus its distance from the left edge of the map. (This process does not stop at wall tiles; measure all the way to the edges of the map.)
+
+So, the box shown below has a distance of 1 from the top edge of the map and 4 from the left edge of the map, resulting in a GPS coordinate of 100 * 1 + 4 = 104.
+
+```
+#######
+#...O..
+#......
+```
+
+The lanternfish would like to know the sum of all boxes' GPS coordinates after the robot finishes moving. In the larger example, the sum of all boxes' GPS coordinates is 10092. In the smaller example, the sum is 2028.
+
+Predict the motion of the robot and boxes in the warehouse. After the robot is finished moving, what is the sum of all boxes' GPS coordinates?
+
+```elixir
+import Kino.Shorts
+```
+
+```elixir
+defmodule Part1 do
+  def parse_input(input) do
+    {map, movements} =
+      input
+      |> String.split("\n")
+      |> Enum.split_while(&(&1 != ""))
+
+    movements =
+      movements
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.join()
+
+    map =
+      map
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {line, row} ->
+        line
+        |> String.graphemes()
+        |> Enum.with_index()
+        |> Enum.map(fn {cell, col} ->
+          {{row, col}, cell}
+        end)
+      end)
+      |> Map.new()
+
+    {map, movements}
+  end
+
+  def iterate({map, movements}) do
+    robot_loc = map |> Map.filter(fn {_k, v} -> v == "@" end) |> Enum.at(0) |> elem(0)
+
+    movements
+    |> String.graphemes()
+    |> Enum.reduce({map, robot_loc}, fn move, {mp, loc} ->
+      res = mp |> move(loc, move)
+      res |> elem(0) |> viz() |> IO.puts()
+
+      res
+    end)
+  end
+
+  def move(map, {rx, ry} = rloc, move) do
+    {dx, dy} =
+      case move do
+        "<" -> {0, -1}
+        ">" -> {0, +1}
+        "^" -> {-1, 0}
+        "v" -> {+1, 0}
+      end
+
+    new_rloc = {rx + dx, ry + dy}
+
+    _result =
+      case map[new_rloc] do
+        # if it hits a wall, do not move
+        "#" ->
+          {map, rloc}
+
+        "." ->
+          map =
+            map
+            |> Map.put(rloc, ".")
+            |> Map.put(new_rloc, "@")
+
+          {map, new_rloc}
+
+        "O" ->
+          {_visited, new_map, _new_val} =
+            Stream.iterate({rx + 2 * dx, ry + 2 * dy}, fn {x, y} -> {x + dx, y + dy} end)
+            |> Enum.take_while(fn loc ->
+              Map.get(map, loc)
+              |> (&(not is_nil(&1))).()
+            end)
+            # not yet correct
+            |> Enum.take_while(&(Map.get(map, &1) != "."))
+            |> Enum.reduce({[], map, "O"}, fn loc, {visited, map, prev_val} ->
+              new_val = map[loc]
+
+              map =
+                map
+                |> Map.put(loc, prev_val)
+
+              {[loc | visited], map, new_val}
+              end) |> dbg()
+
+          new_map =
+            new_map
+            |> Map.put(rloc, ".")
+            |> Map.put(new_rloc, "@")
+
+          {new_map, new_rloc}
+      end
+  end
+
+  def viz(map) do
+    rows = map |> Map.keys() |> Enum.max_by(fn {x, _y} -> x end) |> elem(0)
+    cols = map |> Map.keys() |> Enum.max_by(fn {_x, y} -> y end) |> elem(1)
+
+    for i <- 0..rows, into: [] do
+      for j <- 0..cols, into: [] do
+        map[{i, j}]
+      end
+      |> Enum.join()
+    end
+    |> Enum.join("\n")
+  end
+end
+```
+
+```elixir
+{map, movements} = Part1.parse_input(raw_small_sample)
+```
+
+```elixir
+robot_loc = map |> Map.filter(fn {_k, v} -> v == "@" end) |> Enum.at(0) |> elem(0)
+```
+
+```elixir
+# map1 =
+#   Part1.move(map, {2, 2}, "^")
+#   |> elem(0)
+#   |> Part1.move({1, 2}, ">")
+#   |> elem(0)
+
+# map1 |> Part1.viz() |> IO.puts()
+```
+
+```elixir
+{mid_map, _} = """
+########
+#..@OO.#
+##..O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+
+>>>
+"""
+|> Part1.parse_input()
+```
+
+```elixir
+mid_map
+|> Part1.move({1, 3}, ">")
+|> elem(0)
+|> Part1.viz()
+|> IO.puts()
+```
+
+```elixir
+raw_small_sample
+|> Part1.parse_input()
+|> Part1.iterate()
+|> elem(0)
+|> Part1.viz()
+
+```
