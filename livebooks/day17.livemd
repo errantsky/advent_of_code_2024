@@ -1,0 +1,386 @@
+# Advent of Code - Day 17
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.0"}
+])
+```
+
+## Part 1
+
+```elixir
+import Kino.Shorts
+
+```
+
+```elixir
+
+```
+
+This seems to be a 3-bit computer: its program is a list of `3-bit numbers (0 through 7)`, like `0,1,2,3`. The computer also has three registers` named A, B, and C, but these registers aren't limited to 3 bits and can instead hold any integer.
+
+The computer knows eight instructions, each identified by a 3-bit number (called the instruction's opcode). Each instruction also reads the 3-bit number after it as an input; this is called its operand.
+
+A number called the instruction pointer identifies the position in the program from which the next opcode will be read; it starts at 0, pointing at the first 3-bit number in the program. Except for jump instructions, the instruction pointer increases by 2 after each instruction is processed (to move past the instruction's opcode and its operand). If the computer tries to read an opcode past the end of the program, it instead halts.
+
+So, the program 0,1,2,3 would run the instruction whose opcode is 0 and pass it the operand 1, then run the instruction having opcode 2 and pass it the operand 3, then halt.
+
+There are two types of operands; each instruction specifies the type of its operand. The value of a literal operand is the operand itself. For example, the value of the literal operand 7 is the number 7. The value of a combo operand can be found as follows:
+
+1. Combo operands 0 through 3 represent literal values 0 through 3.
+2. Combo operand 4 represents the value of register A.
+3. Combo operand 5 represents the value of register B.
+4. Combo operand 6 represents the value of register C.
+5. Combo operand 7 is reserved and will not appear in valid programs.
+
+
+The eight instructions are as follows:
+
+1. The adv instruction (opcode 0) performs division. The numerator is the value in the A register. The denominator is found by raising 2 to the power of the instruction's combo operand. (So, an operand of 2 would divide A by 4 (2^2); an operand of 5 would divide A by 2^B.) The result of the division operation is truncated to an integer and then written to the A register.
+
+2. The bxl instruction (opcode 1) calculates the bitwise XOR of register B and the instruction's literal operand, then stores the result in register B.
+
+3. The bst instruction (opcode 2) calculates the value of its combo operand modulo 8 (thereby keeping only its lowest 3 bits), then writes that value to the B register.
+
+4. The jnz instruction (opcode 3) does nothing if the A register is 0. However, if the A register is not zero, it jumps by setting the instruction pointer to the value of its literal operand; if this instruction jumps, the instruction pointer is not increased by 2 after this instruction.
+
+5. The bxc instruction (opcode 4) calculates the bitwise XOR of register B and register C, then stores the result in register B. (For legacy reasons, this instruction reads an operand but ignores it.)
+
+6. The out instruction (opcode 5) calculates the value of its combo operand modulo 8, then outputs that value. (If a program outputs multiple values, they are separated by commas.)
+
+7. The bdv instruction (opcode 6) works exactly like the adv instruction except that the result is stored in the B register. (The numerator is still read from the A register.)
+
+8. The cdv instruction (opcode 7) works exactly like the adv instruction except that the result is stored in the C register. (The numerator is still read from the A register.)
+
+Here are some examples of instruction operation:
+
+1. If register C contains 9, the program 2,6 would set register B to 1.
+2. If register A contains 10, the program 5,0,5,1,5,4 would output 0,1,2.
+3. If register A contains 2024, the program 0,1,5,4,3,0 would output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.
+4. If register B contains 29, the program 1,7 would set register B to 26.
+5. If register B contains 2024 and register C contains 43690, the program 4,0 would set register B to 44354.
+
+```elixir
+
+raw_sample = """
+Register A: 729
+Register B: 0
+Register C: 0
+
+Program: 0,1,5,4,3,0
+"""
+
+```
+
+Your first task is to determine what the program is trying to output. To do this, initialize the registers to the given values, then run the given program, collecting any output produced by out instructions. (Always join the values produced by out instructions with commas.) After the above program halts, its final output will be `4,6,3,5,6,3,5,2,1,0`.
+
+Using the information provided by the debugger, initialize the registers to the given values, then run the program. Once it halts, what do you get if you use commas to join the values it output into a single string?
+
+```elixir
+
+{registers, program} = raw_sample
+|> String.split("\n", trim: true)
+|> Enum.split_while(& not String.starts_with?(&1, "Pro"))
+
+
+
+```
+
+```elixir
+
+pg =
+  program
+  |> hd()
+  |> String.trim_leading("Program: ")
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.to_integer(&1))
+  |> Enum.chunk_every(2)
+
+rg =
+  registers
+  |> Enum.map(fn l ->
+    key =
+      l
+      |> String.split(": ")
+      |> hd()
+      |> String.trim_leading("Register ")
+      |> String.downcase()
+      |> String.to_atom()
+
+    val =
+      l
+      |> String.split(": ")
+      |> Enum.at(-1)
+      |> String.to_integer()
+
+    {key, val}
+  end)
+  |> Map.new()
+
+{pg, rg}
+
+```
+
+```elixir
+
+
+defmodule Helpers do
+  import Bitwise
+  
+  @doc """
+  Combo operands 0 through 3 represent literal values 0 through 3.
+  Combo operand 4 represents the value of register A.
+  Combo operand 5 represents the value of register B.
+  Combo operand 6 represents the value of register C.
+  Combo operand 7 is reserved and will not appear in valid programs.
+  """
+  def combo(registers, operand) do
+    [registers, operand]
+    case operand do
+      0 -> 0
+      1 -> 1
+      2 -> 2
+      3 -> 3
+      4 -> registers.a
+      5 -> registers.b
+      6 -> registers.c
+      _ -> raise "7 is not a valid operand in combos"
+        end 
+  end
+
+  @doc """
+  The bxl instruction (opcode 1) calculates the bitwise XOR of register B and 
+  the instruction's literal operand, then stores the result in register B.
+  """
+  def eval(registers, 1, operand) do
+    registers
+    |> Map.put(:b, registers.b |> bxor(operand))
+    |> Map.put(:ip, registers.ip + 2)
+  end
+
+  @doc """
+  The bst instruction (opcode 2) calculates the value of its combo operand modulo 8
+  (thereby keeping only its lowest 3 bits), then writes that value to the B register.
+  """
+  def eval(registers, 2, operand) do
+    val = combo(registers, operand) |> rem(8)
+
+    registers
+    |> Map.put(:b, val)
+    |> Map.put(:ip, registers.ip + 2)
+  end
+
+  @doc """
+  The jnz instruction (opcode 3) does nothing if the A register is 0. However, 
+  if the A register is not zero, it jumps by setting the instruction pointer to 
+  the value of its literal operand; if this instruction jumps, the instruction 
+  pointer is not increased by 2 after this instruction.
+  """
+  def eval(registers, 3, operand) do
+    case registers.a do
+      0 -> registers
+      _ -> Map.put(registers, :ip, operand)
+    end
+  end
+
+  @doc """
+  The bxc instruction (opcode 4) calculates the bitwise XOR of register B and register C,
+  then stores the result in register B. (For legacy reasons, this instruction reads an operand but ignores it.)
+  """
+  def eval(registers, 4, _operand) do
+    val = registers.b |> bxor(registers.c)
+
+    registers
+    |> Map.put(:b, val)
+    |> Map.put(:ip, registers.ip + 2)
+  end
+
+  @doc """
+  The out instruction (opcode 5) calculates the value of its combo operand modulo 8,
+  then outputs that value. (If a program outputs multiple values, they are separated by commas.)
+  """
+  def eval(registers, 5, operand) do
+    val = combo(registers, operand) |> rem(8) |> dbg()
+
+    registers
+    |> Map.put(:out, [val | registers.out])
+    |> Map.put(:ip, registers.ip + 2)
+  end
+
+  @doc """
+  The adv instruction (opcode 0) performs division. The numerator is the value in the A register.
+  The denominator is found by raising 2 to the power of the instruction's combo operand.
+  (So, an operand of 2 would divide A by 4 (2^2); an operand of 5 would divide A by 2^B.) 
+  The result of the division operation is truncated to an integer and then written to 
+   the A register.
+  """
+  def eval(registers, 0, operand) do
+    val = Integer.floor_div(registers.a, (2**combo(registers, operand)))
+
+    registers
+    |> Map.put(:a, val)
+    |> Map.put(:ip, registers.ip + 2)
+  end
+
+
+  @doc """
+  The bdv instruction (opcode 6) works exactly like the adv instruction except that the
+  result is stored in the B register. (The numerator is still read from the A register.)
+  """
+  def eval(registers, 6, operand) do
+    val = Integer.floor_div(registers.a, 2**combo(registers, operand))
+
+    registers
+    |> Map.put(:b, val)
+    |> Map.put(:ip, registers.ip + 2)
+  end
+
+  @doc """
+  The cdv instruction (opcode 7) works exactly like the adv instruction except 
+  that the result is stored in the C register. (The numerator is still read from the A register.)
+  """
+  def eval(registers, 7, operand) do
+    val = Integer.floor_div(registers.a, 2**combo(registers, operand))
+
+    registers
+    |> Map.put(:c, val)
+    |> Map.put(:ip, registers.ip + 2)
+  end
+end
+
+```
+
+```elixir
+defmodule Part1 do
+  @moduledoc """
+  Advent of Code 2024
+  Day 17 Part 1
+  """
+
+  def parse_input(input) do
+    {registers, program} =
+      input
+      |> String.split("\n", trim: true)
+      |> Enum.split_while(&(not String.starts_with?(&1, "Pro")))
+
+    pg =
+      program
+      |> hd()
+      |> String.trim_leading("Program: ")
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.to_integer(&1))
+      |> Enum.with_index()
+      |> Map.new(fn {num, idx} -> {idx, num} end)
+
+    registers
+    |> Enum.map(fn l ->
+      key =
+        l
+        |> String.split(": ")
+        |> hd()
+        |> String.trim_leading("Register ")
+        |> String.downcase()
+        |> String.to_atom()
+
+      val =
+        l
+        |> String.split(": ")
+        |> Enum.at(-1)
+        |> String.to_integer()
+
+      {key, val}
+    end)
+    |> Map.new()
+    |> Map.put(:ip, 0)
+    |> Map.put(:out, [])
+    |> Map.put(:pg, pg)
+    |> Map.put(:pg_len, pg |> Map.keys() |> Enum.count())
+  end
+
+  def recurse(map) do
+    if map.ip >= map.pg_len - 1 do
+      map
+      |> Map.put(:out, map.out |> Enum.reverse())
+    else
+      opcode = map.pg[map.ip]
+      operand = map.pg[map.ip + 1]
+
+      Helpers.eval(map, opcode, operand)
+      |> recurse()
+      |> dbg()
+    end |> dbg()
+  end
+
+  def iterate(registers, program) do
+    registers =
+      program
+      |> Enum.reduce(registers, fn [opcode, operand], regs ->
+        [opcode, operand] |> dbg()
+        Helpers.eval(regs, opcode, operand)
+      end)
+
+    registers
+    |> Map.put(:out, registers.out |> Enum.reverse())
+  end
+end
+```
+
+If register C contains 9, the program 2,6 would set register B to 1.
+If register A contains 10, the program 5,0,5,1,5,4 would output 0,1,2.
+If register A contains 2024, the program 0,1,5,4,3,0 would output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.
+If register B contains 29, the program 1,7 would set register B to 26.
+If register B contains 2024 and register C contains 43690, the program 4,0 would set register B to 44354.
+
+```elixir
+
+# # If register C contains 9, the program 2,6 would set register B to 1.
+# %{c: 9, b: 0, ip: 0} |> Helpers.eval(2, 6) |> (& &1.b == 1).()
+
+# # If register B contains 29, the program 1,7 would set register B to 26.
+# %{c: 0, b: 29, ip: 0} |> Helpers.eval(1, 7) |> (& &1.b == 26).()
+
+# # If register B contains 2024 and register C contains 43690,
+# # the program 4,0 would set register B to 44354.
+# %{c: 43690, b: 2024, ip: 0} |> Helpers.eval(4, 0) |> (& &1.b == 44354).()
+
+```
+
+```elixir
+
+
+
+# If register A contains 10, the program 5,0,5,1,5,4 would output 0,1,2.
+map1 = """
+Register A: 10
+Register B: 0
+Register C: 0
+
+Program: 5,0,5,1,5,4
+"""
+|> Part1.parse_input() |> dbg()
+
+# reg1 = Part1.iterate(regs1, pgs1)
+# reg1.out == [0, 1, 2]
+
+reg1 = Part1.recurse(map1) |> dbg()
+reg1.out == [0, 1, 2]
+
+
+```
+
+```elixir
+
+# If register A contains 2024, the program 0,1,5,4,3,0 would
+# output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.
+map2 = """
+Register A: 2024
+Register B: 0
+Register C: 0
+
+Program: 0,1,5,4,3,0
+"""
+|> Part1.parse_input() |> dbg()
+
+reg2 = Part1.recurse(map2) |> dbg()
+reg2.out == [4,2,5,6,7,7,7,7,3,1,0] and reg2.a == 0
+```
