@@ -1,0 +1,144 @@
+# Advent of Code - Day 19
+
+```elixir
+# Mix.install([
+#   {:kino, "~> 0.14.0"}
+# ])
+```
+
+## Part 1
+
+```elixir
+
+```
+
+```elixir
+raw_sample = """
+r, wr, b, g, bwu, rb, gb, br
+
+brwrr
+bggr
+gbbr
+rrbgbr
+ubwu
+bwurrg
+brgr
+bbrgwb
+"""
+```
+
+```elixir
+[towels, designs] = raw_sample
+|> String.split("\n\n")
+
+
+designs = designs |> String.split("\n", trim: true)
+towels = towels |> String.split(", ", trim: true)
+```
+
+Not all designs will be possible with the available towels. In the above example, the designs are possible or impossible as follows:
+
+1. `brwrr` can be made with a br towel, then a wr towel, and then finally an r towel.
+2. `bggr` can be made with a b towel, two g towels, and then an r towel.
+3. `gbbr` can be made with a gb towel and then a br towel.
+4. `rrbgbr` can be made with r, rb, g, and br.
+5. `ubwu` is impossible.
+6. `bwurrg` can be made with bwu, r, r, and g.
+7. `brgr` can be made with br, g, and r.
+8. `bbrgwb` is impossible.
+
+In this example, 6 of the eight designs are possible with the available towel patterns.
+
+To get into the onsen as soon as possible, consult your list of towel patterns and desired designs carefully. How many designs are possible?
+
+```elixir
+Day19.Part1.design_possible?("bbrgwb", towels)
+
+Day19.Part1.design_possible?("brgr", towels)
+```
+
+```elixir
+String.slice("bbrgwb", ("b" |> String.length())..-1//1)
+```
+
+### Possible Improvements
+
+1. Memoization: ets
+2. Better filtering: if prefix candidate is larger than the remaining, it can't be a prefix
+
+```elixir
+table = :ets.new(:day19_part1, [:set, :read_concurrency])
+```
+
+```elixir
+defmodule Day19.Part1 do
+  def parse_input(input) do
+    [towels, designs] =
+      input
+      |> String.split("\n\n")
+
+    designs = designs |> String.split("\n", trim: true)
+    towels = towels |> String.split(", ", trim: true) |> MapSet.new()
+    {designs, towels}
+  end
+
+  def design_possible?(design, towels, iters \\ [])
+
+  def design_possible?("", _towels, iters) do
+    {true, iters}
+  end
+
+  def design_possible?(design, towels, iters) do
+    valid_prefixes =
+      towels
+      |> Enum.filter(fn t ->
+        String.starts_with?(design, t)
+      end)
+
+    if Enum.empty?(valid_prefixes) do
+      {false, iters}
+    else
+      design_res =
+        valid_prefixes
+        |> Enum.map(fn vp ->
+          leftover = String.slice(design, (vp |> String.length())..-1//1)
+          {fg, iters} = design_possible?(leftover, towels)
+
+          {fg, [vp | iters]}
+        end)
+        |> Enum.filter(fn {flag, _} -> flag end)
+
+      {not Enum.empty?(design_res), [design_res | iters]}
+    end
+  end
+
+  def result({designs, towels}) do
+    Enum.count(
+      designs,
+      fn d -> design_possible?(d, towels) |> elem(0) end
+    )
+  end
+end
+```
+
+```elixir
+{designs, towels} = raw_sample |> Day19.Part1.parse_input()
+```
+
+```elixir
+towels
+```
+
+```elixir
+raw_sample
+|> Day19.Part1.parse_input()
+|> Day19.Part1.result()
+```
+
+```elixir
+File.read!(
+  "/Users/errantsky/elixir-projects/phoenix-projects/advent_of_code_2024/inputs/day19.txt"
+)
+|> Day19.Part1.parse_input()
+|> Day19.Part1.result()
+```

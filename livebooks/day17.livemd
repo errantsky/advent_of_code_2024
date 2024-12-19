@@ -359,9 +359,6 @@ Program: 5,0,5,1,5,4
 """
 |> Part1.parse_input() |> dbg()
 
-# reg1 = Part1.iterate(regs1, pgs1)
-# reg1.out == [0, 1, 2]
-
 reg1 = Part1.recurse(map1) |> dbg()
 reg1.out == [0, 1, 2]
 
@@ -369,7 +366,7 @@ reg1.out == [0, 1, 2]
 ```
 
 ```elixir
-
+# does not terminate
 # If register A contains 2024, the program 0,1,5,4,3,0 would
 # output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.
 map2 = """

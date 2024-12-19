@@ -1,0 +1,161 @@
+# Advent of Code - Day 18
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.0"}
+])
+```
+
+## Part 1
+
+```elixir
+import Kino.Shorts
+```
+
+```elixir
+raw_sample = """
+5,4
+4,2
+4,5
+3,0
+2,1
+6,3
+2,4
+1,5
+0,6
+3,3
+2,6
+5,1
+1,2
+5,5
+2,5
+6,5
+1,4
+0,4
+6,4
+1,1
+6,1
+1,0
+0,5
+1,6
+2,0
+"""
+```
+
+Your memory space is a two-dimensional grid with coordinates that range from `0 to 70` both horizontally and vertically. However, for the sake of example, suppose you're on a smaller grid with coordinates that range from `0 to 6` and the following list of incoming byte positions:
+
+Each byte position is given as an X,Y coordinate, where X is the distance from the left edge of your memory space and Y is the distance from the top edge of your memory space.
+
+You and The Historians are currently in the top left corner of the memory space (at 0,0) and need to reach the exit in the bottom right corner (at 70,70 in your memory space, but at 6,6 in this example).
+
+In the above example, if you were to draw the memory space after the first 12 bytes have fallen (using . for safe and # for corrupted), it would look like this:
+
+```
+...#...
+..#..#.
+....#..
+...#..#
+..#..#.
+.#..#..
+#.#....
+```
+
+You can take steps up, down, left, or right. After just 12 bytes have corrupted locations in your memory space, the shortest path from the top left corner to the exit would take 22 steps. Here (marked with O) is one such path:
+
+```
+OO.#OOO
+.O#OO#O
+.OOO#OO
+...#OO#
+..#OO#.
+.#.O#..
+#.#OOOO
+```
+
+Simulate the first kilobyte (1024 bytes) falling onto your memory space. Afterward, what is the minimum number of steps needed to reach the exit?
+
+```elixir
+defmodule Day18.Part1 do
+  def parse_input(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn l ->
+      [x, y] = String.split(l, ",", trim: true)
+      {String.to_integer(x), String.to_integer(y)}
+    end)
+    |> MapSet.new()
+  end
+
+  def viz(corrupted_points, rows, cols) do
+    for i <- 1..rows, into: [] do
+      for j <- 1..cols, into: [] do
+        if MapSet.member?(corrupted_points, {i - 1, j - 1}) do
+          "#"
+        else
+          "."
+        end
+      end
+    end
+  end
+
+  def valid_neighbors({x, y}, visited, rows, cols) do
+    [
+      {x - 1, y},
+      {x + 1, y},
+      {x, y + 1},
+      {x, y - 1}
+    ]
+    |> Enum.filter(fn {x, y} ->
+      if x < 0 or y < 0 or x >= rows or y >= cols or MapSet.member?(visited, {x, y}) do
+        false
+      else
+        true
+      end
+    end)
+  end
+
+  def bfs(visited, queue, target, rows, cols) do
+    case :queue.out(queue) do
+      {{:value, head}, queue} ->
+        if head == target do
+          visited
+        else
+          visited = MapSet.put(visited, head)
+
+          vn = valid_neighbors(head, visited, rows, cols)
+
+          queue =
+            vn
+            |> dbg()
+            |> Enum.reduce(queue, fn n, q ->
+              :queue.in(n, q)
+              end) |> dbg()
+
+          bfs(visited, queue, target, rows, cols)
+        end
+        |> dbg()
+
+      {:empty, _queue} ->
+        visited
+    end
+    |> dbg()
+  end
+end
+```
+
+```elixir
+queue = :queue.from_list([{0, 0}])
+
+Day18.Part1.parse_input(raw_sample)
+|> Day18.Part1.bfs(queue, {6, 6}, 7, 7)
+```
+
+```elixir
+Day18.Part1.parse_input(raw_sample)
+|> dbg()
+|> Day18.Part1.viz(6, 6)
+```
+
+```elixir
+
+```
