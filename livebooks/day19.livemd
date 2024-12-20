@@ -51,15 +51,7 @@ In this example, 6 of the eight designs are possible with the available towel pa
 
 To get into the onsen as soon as possible, consult your list of towel patterns and desired designs carefully. How many designs are possible?
 
-```elixir
-Day19.Part1.design_possible?("bbrgwb", towels)
-
-Day19.Part1.design_possible?("brgr", towels)
-```
-
-```elixir
-String.slice("bbrgwb", ("b" |> String.length())..-1//1)
-```
+<!-- livebook:{"break_markdown":true} -->
 
 ### Possible Improvements
 
@@ -67,7 +59,8 @@ String.slice("bbrgwb", ("b" |> String.length())..-1//1)
 2. Better filtering: if prefix candidate is larger than the remaining, it can't be a prefix
 
 ```elixir
-table = :ets.new(:day19_part1, [:set, :read_concurrency])
+table = :ets.new(:day19_part1, [:set, :named_table])
+
 ```
 
 ```elixir
@@ -102,7 +95,17 @@ defmodule Day19.Part1 do
         valid_prefixes
         |> Enum.map(fn vp ->
           leftover = String.slice(design, (vp |> String.length())..-1//1)
-          {fg, iters} = design_possible?(leftover, towels)
+
+          {fg, iters} =
+            case :ets.lookup(:day19_part1, leftover) do
+              [] ->
+                {flag, iters} = design_possible?(leftover, towels)
+                :ets.insert(:day19_part1, {leftover, flag})
+                {flag, iters}
+
+              [{_, flag}] ->
+                {flag, [leftover]}
+            end
 
           {fg, [vp | iters]}
         end)
@@ -122,17 +125,27 @@ end
 ```
 
 ```elixir
-{designs, towels} = raw_sample |> Day19.Part1.parse_input()
+
 ```
 
 ```elixir
-towels
+# Day19.Part1.design_possible?("bbrgwb", towels)
+
+# Day19.Part1.design_possible?("brgr", towels)
 ```
 
 ```elixir
-raw_sample
-|> Day19.Part1.parse_input()
-|> Day19.Part1.result()
+# {designs, towels} = raw_sample |> Day19.Part1.parse_input()
+```
+
+```elixir
+# towels
+```
+
+```elixir
+# raw_sample
+# |> Day19.Part1.parse_input()
+# |> Day19.Part1.result()
 ```
 
 ```elixir
@@ -141,4 +154,78 @@ File.read!(
 )
 |> Day19.Part1.parse_input()
 |> Day19.Part1.result()
+```
+
+## Part 2
+
+```elixir
+table = :ets.new(:day19_part2_sample, [:set, :named_table])
+
+```
+
+```elixir
+defmodule Day19.Part2 do
+  def parse_input(input) do
+    [towels, designs] =
+      input
+      |> String.split("\n\n")
+
+    designs = designs |> String.split("\n", trim: true)
+    towels = towels |> String.split(", ", trim: true) |> MapSet.new()
+    {designs, towels}
+  end
+
+  def design_possible?(design, towels, iters \\ [])
+
+  def design_possible?("", _towels, iters) do
+    {true, iters}
+  end
+
+  def design_possible?(design, towels, iters) do
+    valid_prefixes =
+      towels
+      |> Enum.filter(fn t ->
+        String.starts_with?(design, t)
+      end)
+
+    if Enum.empty?(valid_prefixes) do
+      {false, iters}
+    else
+      design_res =
+        valid_prefixes
+        |> Enum.map(fn vp ->
+          leftover = String.slice(design, (vp |> String.length())..-1//1)
+
+          {fg, iters} =
+            case :ets.lookup(:day19_part2_sample, leftover) do
+              [] ->
+                {flag, iters} = design_possible?(leftover, towels)
+                :ets.insert(:day19_part2_sample, {leftover, flag})
+                {flag, iters}
+
+              [{_, flag}] ->
+                {flag, [leftover]}
+            end
+
+          {fg, [vp | iters]}
+        end)
+        |> Enum.filter(fn {flag, _} -> flag end)
+
+      {not Enum.empty?(design_res), [design_res | iters]}
+    end
+  end
+
+  def result({designs, towels}) do
+    Enum.map(
+      designs,
+      fn d -> design_possible?(d, towels) end
+    )
+  end
+end
+```
+
+```elixir
+raw_sample
+|> Day19.Part2.parse_input()
+|> Day19.Part2.result()
 ```
